@@ -1,11 +1,11 @@
-
 import os
 import numpy as np
 from OpenGL.GL import *
 
 class SceneObject:
-    def __init__(self, name, vertices, indices, textures):
+    def __init__(self, name, vertices, indices, textures, source_path=None):
         self.name = name
+        self.source_path = source_path  # <-- NEW: store file path
         self.vertex_count = len(indices)
         self.textures = textures
 
@@ -34,13 +34,11 @@ class SceneObject:
         glBindVertexArray(0)
 
     def draw(self, shader_program, texture_units):
-        # Special case for compatibility with shaders expecting "texture_diffuse"
         if "BaseColor" in self.textures:
             glActiveTexture(GL_TEXTURE0)
             glBindTexture(GL_TEXTURE_2D, self.textures["BaseColor"])
             glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse"), 0)
 
-        # Bind all other textures with their appropriate names
         for tex_type, tex_id in self.textures.items():
             unit = texture_units.get(tex_type, 0)
             glActiveTexture(GL_TEXTURE0 + unit)
@@ -60,7 +58,8 @@ def load_model_from_txt(folder_path, texture_loader):
         if not filename.endswith(".txt"):
             continue
 
-        with open(os.path.join(folder_path, filename), 'r') as f:
+        file_path = os.path.join(folder_path, filename)
+        with open(file_path, 'r') as f:
             lines = f.readlines()
 
         name = lines[0].split(":")[1].strip()
@@ -77,7 +76,7 @@ def load_model_from_txt(folder_path, texture_loader):
         indices = [int(i) for l in lines[i_start+1:] for i in l.strip().split()]
         flat_vertices = [coord for v in vertices for coord in v]
 
-        obj = SceneObject(name, flat_vertices, indices, textures)
+        obj = SceneObject(name, flat_vertices, indices, textures, source_path=filename)
         objects.append(obj)
 
     return objects

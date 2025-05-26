@@ -13,7 +13,7 @@ FAR_PLANE = 100.0
 
 CAMERA_POS = glm.vec3(0, -3, 10)
 CAMERA_TARGET = glm.vec3(0, 1, 3)
-CAMERA_UP = glm.vec3(0, 1, 3)
+CAMERA_UP = glm.vec3(0, 5, 5)
 
 # Texture unit bindings
 TEXTURE_UNITS = {

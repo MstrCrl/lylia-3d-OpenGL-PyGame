@@ -23,9 +23,15 @@ in vec2 TexCoord;
 out vec4 FragColor;
 
 uniform sampler2D texture_diffuse;
+uniform vec3 emissiveColor;
 
 void main() {
-    FragColor = texture(texture_diffuse, TexCoord);
+    vec4 baseColor = texture(texture_diffuse, TexCoord);
+    if (baseColor.a < 0.1)
+        discard;
+
+    vec3 finalColor = baseColor.rgb + emissiveColor;
+    FragColor = vec4(finalColor, baseColor.a);
 }
 """
 
@@ -39,7 +45,6 @@ def create_shader_program():
     glCompileShader(vs)
     glCompileShader(fs)
 
-    # Optional: check for compile errors
     for shader, name in [(vs, "VERTEX"), (fs, "FRAGMENT")]:
         success = glGetShaderiv(shader, GL_COMPILE_STATUS)
         if not success:
@@ -51,7 +56,6 @@ def create_shader_program():
     glAttachShader(program, fs)
     glLinkProgram(program)
 
-    # Optional: check for linking errors
     success = glGetProgramiv(program, GL_LINK_STATUS)
     if not success:
         info_log = glGetProgramInfoLog(program)

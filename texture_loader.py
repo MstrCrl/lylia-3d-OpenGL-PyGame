@@ -22,8 +22,6 @@ def load_texture(base_path):
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-            print(f"Loaded: {tex_path}")
             return texture_id
-
-    print(f"⚠️ Texture not found for: {base_name} (tried .png/.jpg/.jpeg)")
+        
     return 0  # return 0 if not found
