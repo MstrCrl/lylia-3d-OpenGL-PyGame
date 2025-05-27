@@ -11,6 +11,8 @@ from shader import create_shader_program
 
 def main():
     pygame.init()
+    pygame.mixer.init()
+    
     display = (config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT)
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
     pygame.display.set_caption(config.WINDOW_TITLE)
@@ -49,7 +51,9 @@ def main():
     clock = pygame.time.Clock()
     start_time = time.time()
     running = True
-
+    pygame.mixer.music.load("music.mp3")
+    pygame.mixer.music.play(-1)
+    
     while running:
         clock.tick(60)
         for event in pygame.event.get():
@@ -133,7 +137,9 @@ def main():
             elif "outline_outfit.txt" in name:
                 emissive = glm.vec3(75/255, 0/255, 130/255) * glow_strength1 * 0.2
             elif "magic.txt" in name:
-                emissive = glm.vec3(0.7,0.3,0.0) * glow_strength1 * 3             
+                emissive = glm.vec3(0.7,0.3,0.0) * glow_strength1 * 3   
+            elif "astaff.txt" in name:
+                emissive = 	glm.vec3(0.25, 0.0, 0.4) * glow_strength1 * 3                 
             else:
                 emissive = glm.vec3(0.0)
 
