@@ -1,0 +1,7 @@
+Zoom: 3.94, rot_x: 56.00, rot_y: -359.00
+Zoom: 7.94, rot_x: 29.00, rot_y: -353.00
+Zoom: 7.94, rot_x: 60.00, rot_y: -527.00
+Zoom: 7.94, rot_x: 29.50, rot_y: -446.00
+Zoom: 7.94, rot_x: 33.50, rot_y: -295.00
+Zoom: 4.94, rot_x: 52.50, rot_y: -353.50
+Zoom: 16.94, rot_x: 25.50, rot_y: -350.50

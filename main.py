@@ -3,11 +3,13 @@ from pygame.locals import *
 from OpenGL.GL import *
 import glm
 import time
-
 import config
 from model_loader import load_model_from_txt
 from texture_loader import load_texture
 from shader import create_shader_program
+
+def lerp(a, b, t):
+    return a + (b - a) * t
 
 def main():
     pygame.init()
@@ -30,21 +32,24 @@ def main():
     objects.sort(key=lambda o: 1 if "astaff.txt" in o.source_path.lower() else 0)
 
     projection = glm.perspective(glm.radians(config.FOV), display[0] / display[1], config.NEAR_PLANE, config.FAR_PLANE)
-    view = glm.lookAt(config.CAMERA_POS, config.CAMERA_TARGET, config.CAMERA_UP)
-
     proj_loc = glGetUniformLocation(shader_program, "projection")
     view_loc = glGetUniformLocation(shader_program, "view")
     model_loc = glGetUniformLocation(shader_program, "model")
     emissive_loc = glGetUniformLocation(shader_program, "emissiveColor")
 
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, glm.value_ptr(projection))
-    glUniformMatrix4fv(view_loc, 1, GL_FALSE, glm.value_ptr(view))
 
     glClearColor(0.0, 0.0, 0.0, 1.0)  # Black background
 
-    camera_pos = config.CAMERA_POS
-    target_camera_distance = 5.94
-    rot_x, rot_y = 42.50, 20.50
+    # Initial camera state
+    current_distance = 5.94
+    current_rot_x = 42.50
+    current_rot_y = 20.50
+
+    target_distance = current_distance
+    target_rot_x = current_rot_x
+    target_rot_y = current_rot_y
+
     last_mouse_pos = (0, 0)
     mouse_down = False
 
@@ -54,50 +59,67 @@ def main():
     pygame.mixer.music.load("music.mp3")
     pygame.mixer.music.play(-1)
     
+    views = [
+        (3.94, 56.00, -359.00),
+        (7.94, 29.00, -353.00),
+        (7.94, 60.00, -527.00),
+        (7.94, 29.50, -446.00),
+        (7.94, 33.50, -295.00),
+        (4.94, 52.50, -353.50),
+        (16.94, 25.50, -350.50),
+    ]
+    current_view_index = 0
+
+    lerp_speed = 0.04  # Controls how fast to interpolate
+
     while running:
         clock.tick(60)
         for event in pygame.event.get():
             if event.type == QUIT:
                 running = False
-            if event.type == pygame.KEYDOWN:
+            elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_p:
-                    view_info = f"Zoom: {target_camera_distance:.2f}, rot_x: {rot_x:.2f}, rot_y: {rot_y:.2f}"
+                    view_info = f"Zoom: {target_distance:.2f}, rot_x: {target_rot_x:.2f}, rot_y: {target_rot_y:.2f}"
                     print(view_info)  # Print to terminal
 
                     with open("view_log.txt", "a") as log:
                         log.write(view_info + "\n")
                     print("Saved to view_log.txt")
-            if event.type == pygame.MOUSEBUTTONDOWN:
+                elif event.key in (pygame.K_d, pygame.K_RIGHT):
+                    current_view_index = (current_view_index + 1) % len(views)
+                    target_distance, target_rot_x, target_rot_y = views[current_view_index]
+                elif event.key in (pygame.K_a, pygame.K_LEFT):
+                    current_view_index = (current_view_index - 1) % len(views)
+                    target_distance, target_rot_x, target_rot_y = views[current_view_index]
+            elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 4:
-                    target_camera_distance -= 0.5
-                    target_camera_distance = max(1.0, target_camera_distance)
+                    target_distance -= 0.5
+                    target_distance = max(1.0, target_distance)
                 elif event.button == 5:
-                    target_camera_distance += 0.5
-
-                if event.button == 1:
+                    target_distance += 0.5
+                elif event.button == 1:
                     mouse_down = True
                     last_mouse_pos = pygame.mouse.get_pos()
-
-            if event.type == pygame.MOUSEBUTTONUP:
+            elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
                     mouse_down = False
-
-            if event.type == pygame.MOUSEMOTION and mouse_down:
+            elif event.type == pygame.MOUSEMOTION and mouse_down:
                 x, y = pygame.mouse.get_pos()
                 dx = x - last_mouse_pos[0]
                 dy = y - last_mouse_pos[1]
-                rot_y += dx * 0.5
-                rot_x += dy * 0.5
+                # Directly rotate current rotation by mouse drag
+                current_rot_y += dx * 0.5
+                current_rot_x += dy * 0.5
                 last_mouse_pos = (x, y)
 
-        # Smooth camera zoom
-        lerp_speed = 0.1
-        camera_pos = glm.vec3(0, 0, target_camera_distance)
-        camera_pos.x += (config.CAMERA_POS.x - camera_pos.x) * lerp_speed
-        camera_pos.y += (config.CAMERA_POS.y - camera_pos.y) * lerp_speed
-        camera_pos.z += (target_camera_distance - camera_pos.z) * lerp_speed
+        # Smoothly interpolate current values toward targets
+        current_distance = lerp(current_distance, target_distance, lerp_speed)
+        current_rot_x = lerp(current_rot_x, target_rot_x, lerp_speed)
+        current_rot_y = lerp(current_rot_y, target_rot_y, lerp_speed)
 
-        view = glm.lookAt(glm.vec3(0, 0, target_camera_distance), config.CAMERA_TARGET, config.CAMERA_UP)
+        # Calculate camera position from current zoom distance
+        camera_pos = glm.vec3(0, 0, current_distance)
+        view = glm.lookAt(camera_pos, config.CAMERA_TARGET, config.CAMERA_UP)
         glUniformMatrix4fv(view_loc, 1, GL_FALSE, glm.value_ptr(view))
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -109,9 +131,9 @@ def main():
         for obj in objects:
             model_matrix = glm.mat4(1.0)
 
-            # Apply user rotations (scene orientation)
-            model_matrix = glm.rotate(model_matrix, glm.radians(rot_x), glm.vec3(1, 0, 0))
-            model_matrix = glm.rotate(model_matrix, glm.radians(rot_y), glm.vec3(0, 1, 0))
+            # Apply smooth rotations to scene
+            model_matrix = glm.rotate(model_matrix, glm.radians(current_rot_x), glm.vec3(1, 0, 0))
+            model_matrix = glm.rotate(model_matrix, glm.radians(current_rot_y), glm.vec3(0, 1, 0))
 
             # Calculate orbit translation (except world)
             if not obj.source_path.lower().endswith("world.txt"):
@@ -122,10 +144,8 @@ def main():
                 y = 0.3 * glm.sin(time_elapsed * 1.5)
                 model_matrix = glm.translate(model_matrix, glm.vec3(x, y, z))
 
-            # Local spin on magic.txt (in-place)
-            name = getattr(obj, 'source_path', '').lower()
-            
             # Depth mask for outline outfit
+            name = getattr(obj, 'source_path', '').lower()
             if "outline_outfit.txt" in name:
                 glDepthMask(GL_FALSE)
             else:
@@ -139,7 +159,7 @@ def main():
             elif "magic.txt" in name:
                 emissive = glm.vec3(0.7,0.3,0.0) * glow_strength1 * 3   
             elif "astaff.txt" in name:
-                emissive = 	glm.vec3(0.25, 0.0, 0.4) * glow_strength1 * 3                 
+                emissive = glm.vec3(0.25, 0.0, 0.4) * glow_strength1 * 3                 
             else:
                 emissive = glm.vec3(0.0)
 
